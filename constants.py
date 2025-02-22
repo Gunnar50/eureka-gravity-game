@@ -28,4 +28,4 @@ class GameState(enum.Enum):
   GAME_OVER = 'game_over'
 
 
-levels = []
+levels = [{}]
