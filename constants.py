@@ -1,6 +1,8 @@
 # Colours (r, g, b)
 import enum
 
+import pygame
+
 WHITE = (255, 255, 255)
 BLACK = (0, 0, 0)
 DARKGREY = (40, 40, 40)
@@ -12,13 +14,14 @@ YELLOW = (255, 255, 0)
 COLOURS = [GREEN, BLUE, YELLOW]
 
 # Game settings
+TOP_MARGIN = 50
 WIDTH = 820
-HEIGHT = 600
+HEIGHT = 600 + TOP_MARGIN
 MARGIN_X = 100
-MARGIN_Y = 50
+MARGIN_Y = 110
 NUM_LANES = 5
 FPS = 60
-TITLE = "EUREKA!"
+TITLE = 'EUREKA!'
 BGCOLOUR = DARKGREY
 
 

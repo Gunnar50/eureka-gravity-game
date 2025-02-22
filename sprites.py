@@ -1,5 +1,7 @@
+import os
 import random
 import time
+from typing import Optional
 import pygame
 import constants
 
@@ -12,16 +14,22 @@ class Sprite:
       y: int = 0,
       width: int = 50,
       height: int = 50,
+      image: Optional[pygame.Surface] = None,
       colour: tuple[int, int, int] = constants.WHITE,
   ):
     self.x, self.y = x, y
     self.width, self.height = width, height
     self.colour = colour
+    self.image = image
 
   def draw(self, screen: pygame.Surface):
     draw_x, draw_y = self.x - self.width // 2, self.y - self.height // 2
-    pygame.draw.rect(screen, self.colour,
-                     (draw_x, draw_y, self.width, self.height))
+
+    if self.image:
+      screen.blit(self.image, (draw_x, draw_y))
+    else:
+      pygame.draw.rect(screen, self.colour,
+                       (draw_x, draw_y, self.width, self.height))
 
   def collide(self, other: "Sprite") -> bool:
     return (self.x < other.x + other.width and self.x + self.width > other.x and
@@ -31,8 +39,15 @@ class Sprite:
 class Player(Sprite):
 
   def __init__(self):
-    Sprite.__init__(self)
+    newton_image = pygame.image.load('assets/Newton.png').convert_alpha()
+    Sprite.__init__(
+        self,
+        image=newton_image,
+        width=newton_image.get_width(),
+        height=newton_image.get_height(),
+    )
     self.current_lane = 2
+    self.points = 10
 
   def update(self, lanes: list[tuple[int, int]]):
     self.x, self.y = lanes[self.current_lane]
@@ -46,17 +61,18 @@ class Player(Sprite):
 
 class Fruit(Sprite):
 
-  def __init__(self, x: int, colour, is_apple=False):
+  def __init__(self, x: int, image, width: int, height: int, is_apple=False):
     self.is_apple = is_apple
     self.speed = 5
-    self.width, self.height = 20, 20
+    self.width, self.height = width, height
     Sprite.__init__(
         self,
         x=x,
         y=-self.height,
         width=self.width,
         height=self.height,
-        colour=colour,
+        colour=constants.WHITE,
+        image=image,
     )
 
   def update(self):
@@ -74,7 +90,15 @@ class UIElement:
     self.create_font()
 
   def create_font(self):
-    font = pygame.font.SysFont("Consolas", self.font_size)
+    font_path = 'assets/Pixeled.ttf'
+    try:
+      font = pygame.font.Font(font_path, self.font_size)
+    except pygame.error:
+      print(
+          f"Could not load font file {font_path}. Falling back to system font.")
+      # Fallback to system font if custom font fails to load
+      font = pygame.font.SysFont("Consolas", self.font_size)
+
     self.original_surf = font.render(self.text, True, self.colour)
     self.text_surf = self.original_surf.copy()
     # this surface is used to adjust the alpha of the text_surf
@@ -117,7 +141,7 @@ class UIElement:
 
 class Timer:
 
-  def __init__(self, total_seconds: int = 120):
+  def __init__(self, total_seconds: int = 30):
     self.total_seconds = total_seconds
     self.remaining_seconds = total_seconds
     self.last_tick = time.time()
@@ -131,10 +155,9 @@ class Timer:
         self.last_tick = current_time
 
   def get_time_string(self):
-    minutes = self.remaining_seconds // 60
     seconds = self.remaining_seconds % 60
     # Format as MM:SS
-    return f"{minutes:02d}:{seconds:02d}"
+    return f'{seconds:02d}'
 
   def is_finished(self):
     return self.remaining_seconds <= 0
@@ -152,6 +175,14 @@ class SpawnManager:
     self.last_level_up_time = time.time()
 
     self.level_duration = 20
+
+    # Images
+    self.apple_image = pygame.image.load('assets/Apple60px.png').convert_alpha()
+    self.banana_image = pygame.image.load(
+        'assets/Banana80px.png').convert_alpha()
+    self.orange_image = pygame.image.load(
+        'assets/Orange60px.png').convert_alpha()
+    self.fruit_images = [self.banana_image, self.orange_image]
 
   def get_current_spawn_delay(self) -> float:
     # Decrease spawn delay as level increases
@@ -178,10 +209,10 @@ class SpawnManager:
     apple_probability = max(0.5, apple_probability)
 
     if random.random() < apple_probability:
-      colour = constants.RED
+      image = self.apple_image
       is_apple = True
     else:
-      colour = constants.COLOURS[random.randint(0, len(constants.COLOURS) - 1)]
+      image = random.choice(self.fruit_images)
       is_apple = False
 
-    return colour, is_apple
+    return image, is_apple

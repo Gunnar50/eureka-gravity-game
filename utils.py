@@ -1,4 +1,5 @@
 import constants
+import pygame
 
 
 def generate_lanes() -> list[tuple[int, int]]:

@@ -14,26 +14,36 @@ class Game:
 
   def __init__(self):
     pygame.init()
+    pygame.font.init()
     self.screen = pygame.display.set_mode((constants.WIDTH, constants.HEIGHT))
     pygame.display.set_caption(constants.TITLE)
     self.clock = pygame.time.Clock()
     self.game_state = constants.GameState.IN_GAME
-    self.level = 1
+
+    self.background_image = pygame.image.load(
+        'assets/Background01.png').convert_alpha()
 
     # Labels
-    self.start_game_label = sprites.UIElement(100, 100, 'PRESS ENTER TO START',
-                                              constants.WHITE, 30)
-    self.points_label = sprites.UIElement(100, 100, 'Points: 0',
-                                          constants.WHITE, 30)
-    self.game_over_label = sprites.UIElement(100, 100,
-                                             'PRESS ENTER TO PLAY AGAIN',
-                                             constants.WHITE, 30)
-    self.timer_label = sprites.UIElement(200, 50, '', constants.WHITE, 30)
+    self.labels_background = pygame.Surface(
+        (constants.WIDTH, constants.TOP_MARGIN))
+    # self.start_game_label = sprites.UIElement(100, 100, 'PRESS ENTER TO START',
+    #                                           constants.WHITE, 30)
+    # self.game_over_label = sprites.UIElement(100, 100,
+    #                                          'PRESS ENTER TO PLAY AGAIN',
+    #                                          constants.WHITE, 30)
+    self.score_label = sprites.UIElement(550, -10, 'SCORE 0000',
+                                         constants.WHITE, 20)
+    self.timer_label = sprites.UIElement(350, -10, '', constants.WHITE, 20)
+    self.level_label = sprites.UIElement(100, -10, 'LEVEL 01', constants.WHITE,
+                                         20)
 
     # Player
     self.lanes = utils.generate_lanes()
     self.player = sprites.Player()
-    self.points = 0
+    self.current_level = 1
+    self.score = 0
+    self.current_level_score = 0
+    self.score_to_next_level = 20
 
     # Move cooldown timer
     self.timer = sprites.Timer()
@@ -43,14 +53,7 @@ class Game:
 
     # Fruits
     self.spawn_manager = sprites.SpawnManager()
-    self.fruits = [
-        sprites.Fruit(
-            x=self.lanes[random.randint(0,
-                                        len(self.lanes) - 1)][0],
-            colour=constants.RED,
-            is_apple=True,
-        ),
-    ]
+    self.fruits = []
 
   def new(self):
     pass
@@ -66,9 +69,15 @@ class Game:
       self.update()
       self.draw()
 
+  def update_level(self):
+    if self.current_level_score >= self.score_to_next_level:
+      self.current_level += 1
+      self.current_level_score = 0
+      self.level_label.update_text(f'LEVEL {self.current_level:02d}')
+
   def update(self):
     self.timer.update()
-    self.timer_label.update_text(f'{self.timer.get_time_string()}')
+    self.timer_label.update_text(f'TIME {self.timer.get_time_string()}')
     self.player.update(self.lanes)
 
     self.current_time = time.time()
@@ -78,11 +87,13 @@ class Game:
 
     # Spawn new fruits
     if self.spawn_manager.should_spawn():
-      colour, is_apple = self.spawn_manager.get_spawn_properties()
-      lane = self.lanes[random.randint(0, len(self.lanes) - 1)][0]
+      image, is_apple = self.spawn_manager.get_spawn_properties()
+      lane = random.choice(self.lanes)[0]
       fruit = sprites.Fruit(
           x=lane,
-          colour=colour,
+          width=image.get_width(),
+          height=image.get_height(),
+          image=image,
           is_apple=is_apple,
       )
       self.fruits.append(fruit)
@@ -94,8 +105,10 @@ class Game:
       if self.player.collide(fruit):
         if fruit.is_apple:
           # If we get an apple, increase the move cooldown to 1s
-          self.points += 1
-          self.points_label.update_text(f'Points: {self.points}')
+          self.score += self.player.points
+          self.current_level_score += self.player.points
+          self.score_label.update_text(f'SCORE {self.score:04d}')
+          self.update_level()
         else:
           # Otherwise, wrong fruit increase the move cooldown to 2s
           self.move_cooldown = 2.0
@@ -105,11 +118,13 @@ class Game:
       elif fruit.y > constants.HEIGHT + constants.MARGIN_Y:
         fruit_to_remove.append(index)
 
+    # Remove fruits from the fruits list
     for index in fruit_to_remove:
       self.fruits.pop(index)
 
   def draw(self):
-    self.screen.fill(constants.BGCOLOUR)
+    self.labels_background.fill(constants.BLACK)
+    self.screen.blit(self.background_image, (0, constants.TOP_MARGIN))
 
     # Main menu
     if self.game_state == constants.GameState.MAIN_MENU:
@@ -117,13 +132,17 @@ class Game:
 
     # In game
     elif self.game_state == constants.GameState.IN_GAME:
-      self.points_label.draw(self.screen)
       self.player.draw(self.screen)
 
       for fruit in self.fruits:
         fruit.draw(self.screen)
 
-      self.timer_label.draw(self.screen)
+      # Place the text labels on the labels_background surface
+      # After the fruits have been drawn
+      self.score_label.draw(self.labels_background)
+      self.timer_label.draw(self.labels_background)
+      self.level_label.draw(self.labels_background)
+      self.screen.blit(self.labels_background, (0, 0))
 
     # Game over
     elif self.game_state == constants.GameState.GAME_OVER:
