@@ -39,6 +39,8 @@ class Game:
     self.timer_label = sprites.UIElement(350, -10, '', constants.WHITE, 20)
     self.level_label = sprites.UIElement(100, -10, 'LEVEL 01', constants.WHITE,
                                          20)
+    self.background_music = sprites.Audio('assets/background_music.mp3')
+    self.background_music.play(loop=True)
 
   def new(self):
     self.game_state = constants.GameState.IN_GAME

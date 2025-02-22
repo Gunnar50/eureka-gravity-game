@@ -248,9 +248,25 @@ class SpawnManager:
 
     if random.random() < apple_probability:
       image = self.apple_image
-      is_apple = False
+      is_apple = True
     else:
       image = random.choice(self.fruit_images)
       is_apple = False
 
     return image, is_apple, fruit_speed
+
+
+class Audio:
+
+  def __init__(self, file_path: str):
+    pygame.mixer.init()
+    self.audio = pygame.mixer.Sound(file_path)
+
+  def play(self, loop=False):
+    self.audio.play(loops=-1 if loop else 0)
+
+  def stop(self):
+    self.audio.stop()
+
+  def set_volume(self, volume):
+    self.audio.set_volume(volume)
