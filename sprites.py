@@ -23,9 +23,6 @@ class Sprite:
     self.colour = colour
     self.image = image
 
-  def update_image(self, image: pygame.Surface) -> None:
-    self.image = image
-
   def draw(self, screen: pygame.Surface):
     draw_x, draw_y = (self.x - self.width // 2, self.y - self.height // 2)
     if self.image:
@@ -48,15 +45,28 @@ class Sprite:
 class Player(Sprite):
 
   def __init__(self):
-    newton_image = pygame.image.load('assets/Newton.png').convert_alpha()
+    self.newton_image = pygame.image.load('assets/Newton.png').convert_alpha()
+    self.newton_ouch_image = pygame.image.load(
+        'assets/Newton-Ouch.png').convert_alpha()
     Sprite.__init__(
         self,
-        image=newton_image,
-        width=newton_image.get_width(),
-        height=newton_image.get_height(),
+        image=self.newton_image,
+        width=self.newton_image.get_width(),
+        height=self.newton_image.get_height(),
     )
     self.current_lane = 2
     self.points = 10
+    self.can_move = True
+
+  def update_image(self) -> None:
+    if self.can_move:
+      self.image = self.newton_image
+    else:
+      self.image = self.newton_ouch_image
+
+    if self.image:
+      self.width = self.image.get_width()
+      self.height = self.image.get_height()
 
   def update_draw_position(self):
     self.hitbox_x, self.hitbox_y = (
@@ -66,6 +76,7 @@ class Player(Sprite):
   def update(self, lanes: list[tuple[int, int]]):
     self.x, self.y = lanes[self.current_lane]
     self.update_draw_position()
+    self.update_image()
 
   def move_left(self):
     self.current_lane = max(self.current_lane - 1, 0)
@@ -216,8 +227,8 @@ class SpawnManager:
 
   def should_spawn(self, level: int) -> bool:
     # Decrease spawn delay as level increases
-    # Each level makes spawning 10% faster
-    current_delay = self.base_spawn_delay * (0.9**(level - 1))
+    # Each level makes spawning 5% faster
+    current_delay = self.base_spawn_delay * (0.95**(level - 1))
     min_delay = max(current_delay, self.min_spawn_delay)
     current_time = time.time()
     if current_time - self.last_spawn_time >= min_delay:
@@ -228,16 +239,16 @@ class SpawnManager:
   def get_spawn_properties(self, level: int):
     # Different spawn probabilities for different levels
     # Decrease apple probability as level increases
-    apple_probability = 1.05 - (level * 0.05)
-    # Don't go lower than 30% chance
-    apple_probability = max(0.3, apple_probability)
+    apple_probability = 1.10 - (level * 0.10)
+    # Don't go lower than 40% chance
+    apple_probability = max(0.4, apple_probability)
     # Fruit speed increase with each level
     fruit_speed = min(constants.MAX_FRUIT_SPEED,
                       constants.FRUIT_START_SPEED + (level * 0.5))
 
     if random.random() < apple_probability:
       image = self.apple_image
-      is_apple = True
+      is_apple = False
     else:
       image = random.choice(self.fruit_images)
       is_apple = False

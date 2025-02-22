@@ -31,6 +31,9 @@ class Game:
     #                                           constants.WHITE, 30)
     self.times_up_label = sprites.UIElement(100, 100, 'TIME IS UP!',
                                             constants.WHITE, 30)
+    self.play_again_label = sprites.UIElement(100, 200,
+                                              'PRESS ENTER TO PLAY AGAIN!',
+                                              constants.WHITE, 30)
     self.score_label = sprites.UIElement(550, -10, 'SCORE 0000',
                                          constants.WHITE, 20)
     self.timer_label = sprites.UIElement(350, -10, '', constants.WHITE, 20)
@@ -87,6 +90,7 @@ class Game:
       # Reset cooldown timer
       if self.can_move():
         self.move_cooldown = 0.0
+        self.player.can_move = True
 
       # Spawn new fruits
       if self.spawn_manager.should_spawn(self.current_level):
@@ -117,6 +121,7 @@ class Game:
           else:
             # Otherwise, wrong fruit increase the move cooldown to 2s
             self.move_cooldown = 2.0
+            self.player.can_move = False
           fruit_to_remove.append(index)
 
         # Remove fruits that are out of bounds with a margin
