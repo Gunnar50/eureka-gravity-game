@@ -42,6 +42,7 @@ class Game:
     self.move_cooldown = 0.3
 
     # Fruits
+    self.spawn_manager = sprites.SpawnManager()
     self.fruits = [
         sprites.Fruit(
             x=self.lanes[random.randint(0,
@@ -76,15 +77,8 @@ class Game:
       self.move_cooldown = 0.0
 
     # Spawn new fruits
-    if random.random() < 0.01:
-      # TODO: Find better way to spawn fruits
-      if random.random() < 0.7:
-        colour = constants.RED
-        is_apple = True
-      else:
-        colour = constants.COLOURS[random.randint(1,
-                                                  len(constants.COLOURS) - 1)]
-        is_apple = False
+    if self.spawn_manager.should_spawn():
+      colour, is_apple = self.spawn_manager.get_spawn_properties()
       lane = self.lanes[random.randint(0, len(self.lanes) - 1)][0]
       fruit = sprites.Fruit(
           x=lane,

@@ -18,7 +18,7 @@ MARGIN_X = 100
 MARGIN_Y = 50
 NUM_LANES = 5
 FPS = 60
-TITLE = "GRAVITY TEST"
+TITLE = "EUREKA!"
 BGCOLOUR = DARKGREY
 
 
@@ -26,6 +26,3 @@ class GameState(enum.Enum):
   MAIN_MENU = 'main_menu'
   IN_GAME = 'in_game'
   GAME_OVER = 'game_over'
-
-
-levels = [{}]

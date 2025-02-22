@@ -1,3 +1,4 @@
+import random
 import time
 import pygame
 import constants
@@ -137,3 +138,50 @@ class Timer:
 
   def is_finished(self):
     return self.remaining_seconds <= 0
+
+
+class SpawnManager:
+
+  def __init__(self):
+    self.level = 1
+    self.last_spawn_time = time.time()
+    # Start with 1 second between spawns
+    self.base_spawn_delay = 2.0
+    # Fastest spawn rate
+    self.min_spawn_delay = 0.3
+    self.last_level_up_time = time.time()
+
+    self.level_duration = 20
+
+  def get_current_spawn_delay(self) -> float:
+    # Decrease spawn delay as level increases
+    # Each level makes spawning 10% faster
+    current_delay = self.base_spawn_delay * (0.9**(self.level - 1))
+    # Don't go faster than min_spawn_delay
+    return max(current_delay, self.min_spawn_delay)
+
+  def update_level(self):
+    self.level += 1
+
+  def should_spawn(self) -> bool:
+    current_time = time.time()
+    if current_time - self.last_spawn_time >= self.get_current_spawn_delay():
+      self.last_spawn_time = current_time
+      return True
+    return False
+
+  def get_spawn_properties(self):
+    # Different spawn probabilities for different levels
+    # Decrease apple probability as level increases
+    apple_probability = 1.0 - (self.level * 0.05)
+    # Don't go lower than 50% chance
+    apple_probability = max(0.5, apple_probability)
+
+    if random.random() < apple_probability:
+      colour = constants.RED
+      is_apple = True
+    else:
+      colour = constants.COLOURS[random.randint(0, len(constants.COLOURS) - 1)]
+      is_apple = False
+
+    return colour, is_apple
