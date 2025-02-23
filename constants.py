@@ -10,8 +10,7 @@ LIGHTGREY = (100, 100, 100)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
 RED = (255, 0, 0)
-YELLOW = (255, 255, 0)
-COLOURS = [GREEN, BLUE, YELLOW]
+YELLOW = (253, 181, 7)
 
 # Game settings
 TOP_MARGIN = 50

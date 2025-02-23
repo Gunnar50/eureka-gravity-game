@@ -25,23 +25,33 @@ class Game:
     self.times_up_image = pygame.image.load(
         'assets/TimesUp.png').convert_alpha()
 
-    # Labels
+    ### LABELS ###
     self.labels_background = pygame.Surface(
         (constants.WIDTH, constants.TOP_MARGIN))
+
+    # Main menu
     # self.start_game_label = sprites.UIElement(100, 100, 'PRESS ENTER TO START',
     #                                           constants.WHITE, 30)
-    self.times_up_label = sprites.UIElement(100, 100, 'TIME IS UP!',
-                                            constants.WHITE, 30)
-    self.play_again_label = sprites.UIElement(100, 200,
-                                              'PRESS ENTER TO PLAY AGAIN!',
-                                              constants.WHITE, 30)
+
+    # In game
     self.score_label = sprites.UIElement(550, -10, 'SCORE 0000',
                                          constants.WHITE, 20)
     self.timer_label = sprites.UIElement(350, -10, '', constants.WHITE, 20)
     self.level_label = sprites.UIElement(100, -10, 'LEVEL 01', constants.WHITE,
                                          20)
+
+    # Times up
+    self.times_up_label = sprites.UIElement(100, 100, 'TIME IS UP!',
+                                            constants.YELLOW, 30)
+    self.score_label = sprites.UIElement(constants.WIDTH // 2, 350, '',
+                                         constants.YELLOW, 30)
+    self.play_again_label = sprites.UIElement(100, 200,
+                                              'PRESS ENTER TO PLAY AGAIN!',
+                                              constants.YELLOW, 30)
+
+    ### MUSIC/SOUNDS ###
     self.background_music = sprites.Audio('assets/background_music.mp3')
-    self.background_music.play(loop=True)
+    # self.background_music.play(loop=True)
 
   def new(self):
     self.game_state = constants.GameState.IN_GAME
@@ -52,6 +62,8 @@ class Game:
     self.score = 0
     self.current_level_score = 0
     self.score_to_next_level = constants.SCORE_TO_NEXT_LEVEL
+
+    self.level_label.update_text(f'LEVEL {self.current_level:02d}')
 
     # Move cooldown timer
     self.current_time = time.time()
@@ -154,7 +166,11 @@ class Game:
 
     # Game over
     elif self.game_state == constants.GameState.GAME_OVER:
-      self.screen.blit(self.times_up_image, (250, 100))
+      image_width = self.times_up_image.get_width()
+      self.screen.blit(self.times_up_image,
+                       ((constants.WIDTH - image_width) // 2, 100))
+      self.score_label.update_text(f'SCORE {self.score:04d}')
+      self.score_label.draw(self.screen)
 
     if constants.DEBUG:
       utils.debug_info['speed'] = self.fruits[0].speed if self.fruits else 0

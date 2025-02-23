@@ -1,3 +1,4 @@
+from ast import PyCF_ALLOW_TOP_LEVEL_AWAIT
 import os
 import random
 import time
@@ -119,12 +120,23 @@ class Fruit(Sprite):
 
 class UIElement:
 
-  def __init__(self, x, y, text, colour, font_size=40, alpha=255):
+  def __init__(
+      self,
+      x,
+      y,
+      text,
+      colour,
+      font_size=40,
+      alpha=255,
+      has_shadow=False,
+  ):
     self.x, self.y = x, y
+    self.draw_x, self.draw_y = x, y
     self.text = text
     self.colour = colour
     self.font_size = font_size
     self.alpha = alpha
+    self.has_shadow = has_shadow
     self.create_font()
 
   def create_font(self):
@@ -142,15 +154,22 @@ class UIElement:
     # this surface is used to adjust the alpha of the text_surf
     self.alpha_surf = pygame.Surface(self.text_surf.get_size(), pygame.SRCALPHA)
 
-  def draw(self, screen):
-    self.text_surf = self.original_surf.copy(
-    )  # dont modify the original text_surf
-    self.alpha_surf.fill(
-        (255, 255, 255,
-         self.alpha))  # fill alpha_surf with colour to set its alpha value
+    # Calculate center position
+    text_width = self.text_surf.get_width()
+    text_height = self.text_surf.get_height()
+    self.draw_x, self.draw_y = (self.x - text_width // 2,
+                                self.y - text_height // 2)
+
+  def draw(self, screen: pygame.Surface):
+    # dont modify the original text_surf
+    self.text_surf = self.original_surf.copy()
+    # fill alpha_surf with colour to set its alpha value
+    self.alpha_surf.fill((255, 255, 255, self.alpha))
     self.text_surf.blit(self.alpha_surf, (0, 0),
                         special_flags=pygame.BLEND_RGBA_MULT)
-    screen.blit(self.text_surf, (self.x, self.y))
+    screen.blit(self.text_surf, (self.draw_x, self.draw_y))
+    if self.has_shadow:
+      screen.blit(self.text_surf, (self.draw_x + 5, self.draw_y + 5))
 
   def update_text(self, text: str) -> None:
     self.text = text
@@ -179,7 +198,7 @@ class UIElement:
 
 class Timer:
 
-  def __init__(self, total_seconds: int = 30):
+  def __init__(self, total_seconds: int = 2):
     self.total_seconds = total_seconds
     self.remaining_seconds = total_seconds
     self.last_tick = time.time()
