@@ -368,15 +368,36 @@ class SpawnManager:
 
 class Audio:
 
-  def __init__(self, file_path: str):
+  def __init__(self, file_path: str, is_sound_effect: bool = True):
     pygame.mixer.init()
     self.audio = pygame.mixer.Sound(file_path)
+    self.is_sound_effect = is_sound_effect
+    self.playing = False
+    self.paused = False
 
   def play(self, loop=False):
-    self.audio.play(loops=-1 if loop else 0)
+    if self.is_sound_effect:
+      self.audio.play()
+    else:
+      # Background music/looping sounds check playing state
+      if not self.playing:
+        self.audio.play(loops=-1 if loop else 0)
+        self.playing = True
 
   def stop(self):
-    self.audio.stop()
+    if self.playing:
+      self.audio.stop()
+      self.playing = False
+
+  def pause(self):
+    if self.playing and not self.paused:
+      pygame.mixer.pause()
+      self.paused = True
+
+  def unpause(self):
+    if self.playing and self.paused:
+      pygame.mixer.unpause()
+      self.paused = False
 
   def set_volume(self, volume):
     self.audio.set_volume(volume)

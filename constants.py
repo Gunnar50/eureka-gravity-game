@@ -27,7 +27,7 @@ MAX_FRUIT_SPEED = 15
 PLAYER_HITBOX_OFFSET_Y = 20
 HEIGHT_THRESHOLD = HEIGHT - 160
 SCORE_TO_NEXT_LEVEL = 100
-LEVEL_TIMER = 30
+LEVEL_TIMER = 3
 
 DEBUG = False
 
@@ -36,3 +36,4 @@ class GameState(enum.Enum):
   MAIN_MENU = 'main_menu'
   IN_GAME = 'in_game'
   GAME_OVER = 'game_over'
+  PAUSE = 'pause'

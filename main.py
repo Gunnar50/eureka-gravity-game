@@ -2,8 +2,6 @@ import time
 import constants
 import sprites
 
-import random
-
 import pygame
 
 import utils
@@ -16,11 +14,15 @@ class Game:
     pygame.font.init()
     self.screen = pygame.display.set_mode((constants.WIDTH, constants.HEIGHT))
     pygame.display.set_caption(constants.TITLE)
+    pygame.display.set_icon(pygame.image.load('assets/Apple60px.png'))
     self.clock = pygame.time.Clock()
-    self.game_state = constants.GameState.IN_GAME
+
+    self.lanes = utils.generate_lanes()
+    self.game_state = constants.GameState.MAIN_MENU
 
     self.background_image = pygame.image.load(
         'assets/Background01.png').convert_alpha()
+    self.pause_image = pygame.image.load('assets/Pause.png').convert_alpha()
 
     ### LABELS ###
     self.labels_background = pygame.Surface(
@@ -45,13 +47,23 @@ class Game:
                                              constants.WHITE, 27)
 
     ### MUSIC/SOUNDS ###
-    self.background_music = sprites.Audio('assets/background_music.mp3')
-    self.background_music.play(loop=True)
+    self.background_music = sprites.Audio('assets/background_music.mp3',
+                                          is_sound_effect=False)
+    self.times_up_sound = sprites.Audio('assets/sounds/timesup.wav',
+                                        is_sound_effect=False)
+    self.hit_sound = sprites.Audio('assets/sounds/hit.wav')
+    self.apple_sound = sprites.Audio('assets/sounds/apple.wav')
+    self.apple_sound.set_volume(0.3)
 
-  def new(self):
+    self.reset_properties()
+
+  def new_game(self):
     self.game_state = constants.GameState.IN_GAME
+    self.background_music.play(loop=True)
+    self.reset_properties()
+
+  def reset_properties(self):
     # Player
-    self.lanes = utils.generate_lanes()
     self.player = sprites.Player()
     self.current_level = 1
     self.score = 0
@@ -62,7 +74,7 @@ class Game:
 
     # Move cooldown timer
     self.current_time = time.time()
-    self.last_move_time = 0.0
+    self.last_move_time = self.current_time
     self.move_cooldown = 0.0
 
     self.timer = sprites.Timer()
@@ -118,6 +130,7 @@ class Game:
             self.current_level_score += self.player.points
             self.score_label.update_text(f'SCORE {self.score:04d}')
             self.update_level()
+            self.apple_sound.play()
           else:
             # Otherwise, wrong fruit increase the move cooldown to 2s
             # We only want to increase the cooldown when the player hits the first
@@ -127,6 +140,7 @@ class Game:
               self.last_move_time = self.current_time
               self.move_cooldown = 2.0
               self.player.can_move = False
+              self.hit_sound.play()
           fruits_to_remove.append(fruit)
 
         # Remove fruits that are out of bounds with a margin
@@ -142,14 +156,14 @@ class Game:
     self.bottom_black_bar.fill(constants.BLACK)
     self.screen.blit(self.background_image, (0, constants.TOP_MARGIN))
 
-    # Main menu
+    # MAIN MENU #
     if self.game_state == constants.GameState.MAIN_MENU:
       self.screen.blit(self.intro_image, (0, constants.TOP_MARGIN))
 
-    # In game
-    elif self.game_state == constants.GameState.IN_GAME:
+    # IN GAME #
+    elif (self.game_state == constants.GameState.IN_GAME or
+          self.game_state == constants.GameState.PAUSE):
       self.player.draw(self.screen)
-
       for fruit in self.fruits:
         fruit.draw(self.screen)
 
@@ -161,10 +175,14 @@ class Game:
       self.screen.blit(self.labels_background, (0, 0))
       self.screen.blit(self.bottom_black_bar,
                        (0, constants.HEIGHT - constants.TOP_MARGIN))
+      # PAUSED #
+      if self.game_state == constants.GameState.PAUSE:
+        self.screen.blit(self.pause_image, (0, constants.TOP_MARGIN))
 
-    # Game over
+    # GAME OVER #
     elif self.game_state == constants.GameState.GAME_OVER:
-      image_width = self.times_up_image.get_width()
+      self.times_up_sound.play()
+      self.background_music.stop()
       self.screen.blit(self.times_up_image, (0, constants.TOP_MARGIN))
       self.highscore_label.update_text(f'SCORE {self.score:04d}')
       self.highscore_label.draw(self.screen)
@@ -187,34 +205,14 @@ class Game:
         pygame.quit()
         quit(0)
       if event.type == pygame.KEYDOWN:
-        if event.key == pygame.K_ESCAPE:
-          pygame.quit()
-          quit(0)
-        if constants.DEBUG:
-          if event.key == pygame.K_UP:
-            self.highscore_label.font_size += 1
-          if event.key == pygame.K_DOWN:
-            self.highscore_label.font_size -= 1
-          if event.key == pygame.K_LEFT:
-            self.highscore_label.y -= 1
-          if event.key == pygame.K_RIGHT:
-            self.highscore_label.y += 1
-          if event.key == pygame.K_SPACE:
-            if self.highscore_label.alpha == 0:
-              self.highscore_label.alpha = 255
-            else:
-              self.highscore_label.alpha = 0
 
-          self.highscore_label.create_font()
-          utils.debug_info['size'] = self.highscore_label.font_size
-          utils.debug_info['y'] = self.highscore_label.y
-
-        # Main menu
+        # MAIN MENU #
         if self.game_state == constants.GameState.MAIN_MENU:
           if event.key == pygame.K_RETURN:
             self.game_state = constants.GameState.IN_GAME
+            self.background_music.play(loop=True)
 
-        # In game
+        # IN GAME #
         elif self.game_state == constants.GameState.IN_GAME:
           if self.can_move():
             if event.key == pygame.K_LEFT:
@@ -223,10 +221,17 @@ class Game:
               self.player.move_right()
             self.last_move_time = self.current_time
 
-          elif event.key == pygame.K_RETURN:
-            self.game_state = constants.GameState.GAME_OVER
+          if event.key == pygame.K_ESCAPE:
+            self.background_music.pause()
+            self.game_state = constants.GameState.PAUSE
 
-        # Game over
+        # PAUSED #
+        elif self.game_state == constants.GameState.PAUSE:
+          if event.key == pygame.K_ESCAPE:
+            self.background_music.unpause()
+            self.game_state = constants.GameState.IN_GAME
+
+        # GAME OVER #
         elif self.game_state == constants.GameState.GAME_OVER:
           if event.key == pygame.K_RETURN:
             self.playing = False
@@ -235,5 +240,5 @@ class Game:
 if __name__ == '__main__':
   game = Game()
   while True:
-    game.new()
     game.run()
+    game.new_game()
