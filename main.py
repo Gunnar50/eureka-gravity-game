@@ -47,7 +47,7 @@ class Game:
                                              constants.WHITE, 27)
 
     ### MUSIC/SOUNDS ###
-    self.background_music = sprites.Audio('assets/background_2.mp3',
+    self.background_music = sprites.Audio('assets/sounds/background_2.mp3',
                                           is_sound_effect=False)
     self.times_up_sound = sprites.Audio('assets/sounds/timesup.wav',
                                         is_sound_effect=False)
