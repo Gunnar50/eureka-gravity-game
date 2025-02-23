@@ -4,6 +4,7 @@ import constants
 import sprites
 
 import pygame
+import asyncio
 
 import utils
 
@@ -85,13 +86,14 @@ class Game:
     self.spawn_manager = sprites.SpawnManager(self.lanes)
     self.fruits = []
 
-  def run(self):
+  async def run(self):
     self.playing = True
     while self.playing:
       self.clock.tick(constants.FPS)
-      self.events()
-      self.update()
-      self.draw()
+      await self.events()
+      await self.update()
+      await self.draw()
+      await asyncio.sleep(0)
 
   def update_level(self):
     if self.current_level_score >= self.score_to_next_level:
@@ -101,7 +103,7 @@ class Game:
       # Reset timer
       self.timer.reset()
 
-  def update(self):
+  async def update(self):
     if self.game_state == constants.GameState.IN_GAME:
       # Check for times up
       if self.timer.is_finished():
@@ -153,7 +155,7 @@ class Game:
       for fruit in fruits_to_remove:
         self.fruits.remove(fruit)
 
-  def draw(self):
+  async def draw(self):
     self.labels_background.fill(constants.BLACK)
     self.bottom_black_bar.fill(constants.BLACK)
     self.screen.blit(self.background_image, (0, constants.TOP_MARGIN))
@@ -201,7 +203,7 @@ class Game:
   def can_move(self) -> bool:
     return self.current_time - self.last_move_time >= self.move_cooldown
 
-  def events(self):
+  async def events(self):
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
         pygame.quit()
@@ -239,8 +241,12 @@ class Game:
             self.playing = False
 
 
-if __name__ == '__main__':
+async def main():
   game = Game()
   while True:
-    game.run()
+    await game.run()
     game.new_game()
+
+
+if __name__ == '__main__':
+  asyncio.run(main())

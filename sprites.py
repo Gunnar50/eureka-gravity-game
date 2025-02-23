@@ -369,35 +369,88 @@ class SpawnManager:
 class Audio:
 
   def __init__(self, file_path: str, is_sound_effect: bool = True):
-    pygame.mixer.init()
-    self.audio = pygame.mixer.Sound(file_path)
+    try:
+      pygame.mixer.init()
+      if is_sound_effect:
+        self.audio = pygame.mixer.Sound(file_path)
+      else:
+        # For background music, store the path and use mixer.music
+        self.audio = file_path
+    except Exception as e:
+      print(f"Couldn't load audio: {file_path}, Error: {e}")
+      self.audio = None
     self.is_sound_effect = is_sound_effect
     self.playing = False
     self.paused = False
 
   def play(self, loop=False):
-    if self.is_sound_effect:
-      self.audio.play()
-    else:
-      # Background music/looping sounds check playing state
-      if not self.playing:
-        self.audio.play(loops=-1 if loop else 0)
+    try:
+      if self.audio is None:
+        return
+
+      if self.is_sound_effect:
+        self.audio.play()
         self.playing = True
+      else:
+        # Background music handling
+        if not self.playing:
+          try:
+            pygame.mixer.music.load(self.audio)
+            pygame.mixer.music.play(-1 if loop else 0)
+            self.playing = True
+          except Exception as e:
+            print(f"Couldn't play background music: {e}")
+    except Exception as e:
+      print(f"Couldn't play audio: {e}")
 
   def stop(self):
-    if self.playing:
-      self.audio.stop()
+    try:
+      if not self.playing:
+        return
+
+      if self.is_sound_effect:
+        self.audio.stop()
+      else:
+        pygame.mixer.music.stop()
       self.playing = False
+      self.paused = False
+    except Exception as e:
+      print(f"Couldn't stop audio: {e}")
 
   def pause(self):
-    if self.playing and not self.paused:
-      pygame.mixer.pause()
+    try:
+      if not self.playing or self.paused:
+        return
+
+      if self.is_sound_effect:
+        pygame.mixer.pause()
+      else:
+        pygame.mixer.music.pause()
       self.paused = True
+    except Exception as e:
+      print(f"Couldn't pause audio: {e}")
 
   def unpause(self):
-    if self.playing and self.paused:
-      pygame.mixer.unpause()
+    try:
+      if not self.playing or not self.paused:
+        return
+
+      if self.is_sound_effect:
+        pygame.mixer.unpause()
+      else:
+        pygame.mixer.music.unpause()
       self.paused = False
+    except Exception as e:
+      print(f"Couldn't unpause audio: {e}")
 
   def set_volume(self, volume):
-    self.audio.set_volume(volume)
+    try:
+      if self.audio is None:
+        return
+
+      if self.is_sound_effect:
+        self.audio.set_volume(volume)
+      else:
+        pygame.mixer.music.set_volume(volume)
+    except Exception as e:
+      print(f"Couldn't set volume: {e}")
