@@ -1,3 +1,4 @@
+import sys
 import time
 import constants
 import sprites
@@ -204,7 +205,7 @@ class Game:
     for event in pygame.event.get():
       if event.type == pygame.QUIT:
         pygame.quit()
-        quit(0)
+        sys.exit()
       if event.type == pygame.KEYDOWN:
 
         # MAIN MENU #
