@@ -52,6 +52,7 @@ class Game:
     self.times_up_sound = sprites.Audio('assets/sounds/timesup.wav',
                                         is_sound_effect=False)
     self.hit_sound = sprites.Audio('assets/sounds/hit.wav')
+    self.hit_sound.set_volume(0.4)
     self.apple_sound = sprites.Audio('assets/sounds/apple.wav')
     self.apple_sound.set_volume(0.3)
 
