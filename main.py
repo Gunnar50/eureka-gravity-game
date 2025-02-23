@@ -18,11 +18,12 @@ class Game:
     self.screen = pygame.display.set_mode((constants.WIDTH, constants.HEIGHT))
     pygame.display.set_caption(constants.TITLE)
     self.clock = pygame.time.Clock()
-    self.debug = {}
     self.game_state = constants.GameState.IN_GAME
 
     self.background_image = pygame.image.load(
         'assets/Background01.png').convert_alpha()
+    self.times_up_image = pygame.image.load(
+        'assets/TimesUp.png').convert_alpha()
 
     # Labels
     self.labels_background = pygame.Surface(
@@ -50,16 +51,17 @@ class Game:
     self.current_level = 1
     self.score = 0
     self.current_level_score = 0
-    self.score_to_next_level = 100
+    self.score_to_next_level = constants.SCORE_TO_NEXT_LEVEL
 
     # Move cooldown timer
-    self.timer = sprites.Timer()
     self.current_time = time.time()
     self.last_move_time = 0.0
-    self.move_cooldown = 0.3
+    self.move_cooldown = 0.0
+
+    self.timer = sprites.Timer()
 
     # Fruits
-    self.spawn_manager = sprites.SpawnManager()
+    self.spawn_manager = sprites.SpawnManager(self.lanes)
     self.fruits = []
 
   def run(self):
@@ -95,26 +97,15 @@ class Game:
         self.player.can_move = True
 
       # Spawn new fruits
-      if self.spawn_manager.should_spawn(self.current_level):
-        image, is_apple, speed = self.spawn_manager.get_spawn_properties(
-            self.current_level)
-        lane = random.choice(self.lanes)[0]
-        fruit = sprites.Fruit(
-            x=lane,
-            width=image.get_width(),
-            height=image.get_height(),
-            image=image,
-            speed=speed,
-            is_apple=is_apple,
-        )
-        self.fruits.append(fruit)
+      fruits = self.spawn_manager.spawn_fruits(self.current_level)
+      self.fruits.extend(fruits)
 
       # Check if collide and remove fruits
-      fruit_to_remove = []
-      for index, fruit in enumerate(self.fruits):
+      fruits_to_remove = []
+      for fruit in self.fruits:
         fruit.update()
         if fruit.y <= constants.HEIGHT_THRESHOLD and self.player.collide(fruit):
-          if fruit.is_apple:
+          if fruit.is_apple and self.player.can_move:
             # If we get an apple, increase the move cooldown to 1s
             self.score += self.player.points
             self.current_level_score += self.player.points
@@ -122,17 +113,22 @@ class Game:
             self.update_level()
           else:
             # Otherwise, wrong fruit increase the move cooldown to 2s
-            self.move_cooldown = 2.0
-            self.player.can_move = False
-          fruit_to_remove.append(index)
+            # We only want to increase the cooldown when the player hits the first
+            # wrong fruit in a sequence, if the player hits multiple wrong fruits
+            # in a row, we don't want to increase the cooldown multiple times
+            if self.move_cooldown < 2.0:
+              self.last_move_time = self.current_time
+              self.move_cooldown = 2.0
+              self.player.can_move = False
+          fruits_to_remove.append(fruit)
 
         # Remove fruits that are out of bounds with a margin
         elif fruit.y > constants.HEIGHT + constants.MARGIN_Y:
-          fruit_to_remove.append(index)
+          fruits_to_remove.append(fruit)
 
       # Remove fruits from the fruits list
-      for index in fruit_to_remove:
-        self.fruits.pop(index)
+      for fruit in fruits_to_remove:
+        self.fruits.remove(fruit)
 
   def draw(self):
     self.labels_background.fill(constants.BLACK)
@@ -158,12 +154,11 @@ class Game:
 
     # Game over
     elif self.game_state == constants.GameState.GAME_OVER:
-      self.times_up_label.draw(self.screen)
+      self.screen.blit(self.times_up_image, (250, 100))
 
     if constants.DEBUG:
-      self.debug['game_state'] = self.game_state
-      self.debug['playing'] = self.playing
-      utils.draw_info(self.debug, self.screen)
+      utils.debug_info['speed'] = self.fruits[0].speed if self.fruits else 0
+      utils.draw_info(utils.debug_info, self.screen)
       pygame.draw.line(self.screen, constants.WHITE,
                        (0, constants.HEIGHT_THRESHOLD),
                        (constants.WIDTH, constants.HEIGHT_THRESHOLD))

@@ -205,82 +205,6 @@ class Timer:
     self.last_tick = time.time()
 
 
-class SpawnManager2:
-
-  def __init__(self):
-    self.level = 1
-    self.last_spawn_time = time.time()
-    # Start with 1 second between spawns
-    self.base_spawn_delay = 2.0
-    # Fastest spawn rate
-    self.min_spawn_delay = 0.3
-    self.last_level_up_time = time.time()
-
-    self.level_duration = 20
-
-    # Images
-    self.apple_image = pygame.image.load('assets/Apple60px.png').convert_alpha()
-    self.banana_image = pygame.image.load(
-        'assets/Banana80px.png').convert_alpha()
-    self.orange_image = pygame.image.load(
-        'assets/Orange60px.png').convert_alpha()
-    self.fruit_images = [self.banana_image, self.orange_image]
-
-  def should_spawn(self, level: int) -> bool:
-    # Decrease spawn delay as level increases
-    # Each level makes spawning 10% faster
-    current_delay = self.base_spawn_delay * (0.9**(level - 1))
-    min_delay = max(current_delay, self.min_spawn_delay)
-    current_time = time.time()
-    if current_time - self.last_spawn_time >= min_delay:
-      self.last_spawn_time = current_time
-      return True
-    return False
-
-  def should_spawn_apple(self) -> bool:
-    current_time = time.time()
-    if current_time - self.last_spawn_time >= random.randint(1, 3):
-      self.last_spawn_time = current_time
-      return True
-    return False
-
-  def should_spawn_other_fruits(self) -> bool:
-    current_time = time.time()
-    if current_time - self.last_spawn_time >= 1:
-      if random.random() < 0.5:
-        self.last_spawn_time = current_time
-        return True
-    return False
-
-  def get_spawn_properties(self, level: int):
-    # Different spawn probabilities for different levels
-    # Decrease apple probability as level increases
-    apple_probability = 1.20 - (level * 0.20)
-    # Don't go lower than 40% chance
-    apple_probability = max(0.4, apple_probability)
-    # Fruit speed increase with each level
-    fruit_speed = min(constants.MAX_FRUIT_SPEED,
-                      constants.FRUIT_START_SPEED + (level * 0.5))
-
-    if random.random() < apple_probability:
-      image = self.apple_image
-      is_apple = True
-    else:
-      image = random.choice(self.fruit_images)
-      is_apple = False
-
-    return image, is_apple, fruit_speed
-
-  def spawn_apple(self, level: int):
-    if self.should_spawn_apple():
-      fruit_speed = min(constants.MAX_FRUIT_SPEED,
-                        constants.FRUIT_START_SPEED + (level * 0.5))
-      image = self.apple_image
-      is_apple = True
-
-      return image, is_apple, fruit_speed
-
-
 class SpawnManager:
 
   def __init__(self, lanes):
@@ -306,7 +230,7 @@ class SpawnManager:
     self.fruit_max_spawn_chance = 0.8
     self.fruit_spawned_last = False
 
-    self.fruits_speed_increase_per_level = 0.9
+    self.fruits_speed_increase_per_level = 1.0
 
     self.occupied_lanes = []
     self.last_current_lane_clear = time.time()

@@ -17,6 +17,9 @@ def generate_lanes() -> list[tuple[int, int]]:
   return points
 
 
+debug_info = {}
+
+
 def draw_info(info_list, screen: pygame.Surface):
   font = pygame.font.Font(None, 25)
   for i, key in enumerate(info_list):
