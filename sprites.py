@@ -1,5 +1,3 @@
-from ast import PyCF_ALLOW_TOP_LEVEL_AWAIT
-import os
 import random
 import time
 from typing import Optional
@@ -128,7 +126,6 @@ class UIElement:
       colour,
       font_size=40,
       alpha=255,
-      has_shadow=False,
   ):
     self.x, self.y = x, y
     self.draw_x, self.draw_y = x, y
@@ -136,7 +133,6 @@ class UIElement:
     self.colour = colour
     self.font_size = font_size
     self.alpha = alpha
-    self.has_shadow = has_shadow
     self.create_font()
 
   def create_font(self):
@@ -168,8 +164,12 @@ class UIElement:
     self.text_surf.blit(self.alpha_surf, (0, 0),
                         special_flags=pygame.BLEND_RGBA_MULT)
     screen.blit(self.text_surf, (self.draw_x, self.draw_y))
-    if self.has_shadow:
-      screen.blit(self.text_surf, (self.draw_x + 5, self.draw_y + 5))
+    if constants.DEBUG:
+      pygame.draw.rect(screen,
+                       constants.WHITE,
+                       (self.draw_x, self.draw_y, self.text_surf.get_width(),
+                        self.text_surf.get_height()),
+                       width=2)
 
   def update_text(self, text: str) -> None:
     self.text = text
@@ -198,9 +198,9 @@ class UIElement:
 
 class Timer:
 
-  def __init__(self, total_seconds: int = 2):
-    self.total_seconds = total_seconds
-    self.remaining_seconds = total_seconds
+  def __init__(self):
+    self.total_seconds = constants.LEVEL_TIMER
+    self.remaining_seconds = constants.LEVEL_TIMER
     self.last_tick = time.time()
     self.is_running = True
 

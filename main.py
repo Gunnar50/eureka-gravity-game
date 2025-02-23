@@ -1,4 +1,3 @@
-from operator import is_
 import time
 import constants
 import sprites
@@ -22,36 +21,32 @@ class Game:
 
     self.background_image = pygame.image.load(
         'assets/Background01.png').convert_alpha()
-    self.times_up_image = pygame.image.load(
-        'assets/TimesUp.png').convert_alpha()
 
     ### LABELS ###
     self.labels_background = pygame.Surface(
         (constants.WIDTH, constants.TOP_MARGIN))
+    self.bottom_black_bar = pygame.Surface(
+        (constants.WIDTH, constants.TOP_MARGIN))
 
     # Main menu
-    # self.start_game_label = sprites.UIElement(100, 100, 'PRESS ENTER TO START',
-    #                                           constants.WHITE, 30)
+    self.intro_image = pygame.image.load('assets/Intro.png').convert_alpha()
 
     # In game
-    self.score_label = sprites.UIElement(550, -10, 'SCORE 0000',
-                                         constants.WHITE, 20)
-    self.timer_label = sprites.UIElement(350, -10, '', constants.WHITE, 20)
-    self.level_label = sprites.UIElement(100, -10, 'LEVEL 01', constants.WHITE,
+    self.level_label = sprites.UIElement(120, 20, 'LEVEL 01', constants.WHITE,
+                                         20)
+    self.timer_label = sprites.UIElement(410, 20, '', constants.WHITE, 20)
+    self.score_label = sprites.UIElement(700, 20, 'SCORE 0000', constants.WHITE,
                                          20)
 
     # Times up
-    self.times_up_label = sprites.UIElement(100, 100, 'TIME IS UP!',
-                                            constants.YELLOW, 30)
-    self.score_label = sprites.UIElement(constants.WIDTH // 2, 350, '',
-                                         constants.YELLOW, 30)
-    self.play_again_label = sprites.UIElement(100, 200,
-                                              'PRESS ENTER TO PLAY AGAIN!',
-                                              constants.YELLOW, 30)
+    self.times_up_image = pygame.image.load(
+        'assets/TimesUpB.png').convert_alpha()
+    self.highscore_label = sprites.UIElement(constants.WIDTH // 2, 395, '',
+                                             constants.WHITE, 27)
 
     ### MUSIC/SOUNDS ###
     self.background_music = sprites.Audio('assets/background_music.mp3')
-    # self.background_music.play(loop=True)
+    self.background_music.play(loop=True)
 
   def new(self):
     self.game_state = constants.GameState.IN_GAME
@@ -144,11 +139,12 @@ class Game:
 
   def draw(self):
     self.labels_background.fill(constants.BLACK)
+    self.bottom_black_bar.fill(constants.BLACK)
     self.screen.blit(self.background_image, (0, constants.TOP_MARGIN))
 
     # Main menu
     if self.game_state == constants.GameState.MAIN_MENU:
-      self.start_game_label.draw(self.screen)
+      self.screen.blit(self.intro_image, (0, constants.TOP_MARGIN))
 
     # In game
     elif self.game_state == constants.GameState.IN_GAME:
@@ -163,14 +159,15 @@ class Game:
       self.timer_label.draw(self.labels_background)
       self.level_label.draw(self.labels_background)
       self.screen.blit(self.labels_background, (0, 0))
+      self.screen.blit(self.bottom_black_bar,
+                       (0, constants.HEIGHT - constants.TOP_MARGIN))
 
     # Game over
     elif self.game_state == constants.GameState.GAME_OVER:
       image_width = self.times_up_image.get_width()
-      self.screen.blit(self.times_up_image,
-                       ((constants.WIDTH - image_width) // 2, 100))
-      self.score_label.update_text(f'SCORE {self.score:04d}')
-      self.score_label.draw(self.screen)
+      self.screen.blit(self.times_up_image, (0, constants.TOP_MARGIN))
+      self.highscore_label.update_text(f'SCORE {self.score:04d}')
+      self.highscore_label.draw(self.screen)
 
     if constants.DEBUG:
       utils.debug_info['speed'] = self.fruits[0].speed if self.fruits else 0
@@ -193,6 +190,24 @@ class Game:
         if event.key == pygame.K_ESCAPE:
           pygame.quit()
           quit(0)
+        if constants.DEBUG:
+          if event.key == pygame.K_UP:
+            self.highscore_label.font_size += 1
+          if event.key == pygame.K_DOWN:
+            self.highscore_label.font_size -= 1
+          if event.key == pygame.K_LEFT:
+            self.highscore_label.y -= 1
+          if event.key == pygame.K_RIGHT:
+            self.highscore_label.y += 1
+          if event.key == pygame.K_SPACE:
+            if self.highscore_label.alpha == 0:
+              self.highscore_label.alpha = 255
+            else:
+              self.highscore_label.alpha = 0
+
+          self.highscore_label.create_font()
+          utils.debug_info['size'] = self.highscore_label.font_size
+          utils.debug_info['y'] = self.highscore_label.y
 
         # Main menu
         if self.game_state == constants.GameState.MAIN_MENU:
