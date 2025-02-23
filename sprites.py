@@ -4,6 +4,7 @@ import time
 from typing import Optional
 import pygame
 import constants
+import utils
 
 
 class Sprite:
@@ -204,7 +205,7 @@ class Timer:
     self.last_tick = time.time()
 
 
-class SpawnManager:
+class SpawnManager2:
 
   def __init__(self):
     self.level = 1
@@ -227,8 +228,8 @@ class SpawnManager:
 
   def should_spawn(self, level: int) -> bool:
     # Decrease spawn delay as level increases
-    # Each level makes spawning 5% faster
-    current_delay = self.base_spawn_delay * (0.95**(level - 1))
+    # Each level makes spawning 10% faster
+    current_delay = self.base_spawn_delay * (0.9**(level - 1))
     min_delay = max(current_delay, self.min_spawn_delay)
     current_time = time.time()
     if current_time - self.last_spawn_time >= min_delay:
@@ -236,10 +237,25 @@ class SpawnManager:
       return True
     return False
 
+  def should_spawn_apple(self) -> bool:
+    current_time = time.time()
+    if current_time - self.last_spawn_time >= random.randint(1, 3):
+      self.last_spawn_time = current_time
+      return True
+    return False
+
+  def should_spawn_other_fruits(self) -> bool:
+    current_time = time.time()
+    if current_time - self.last_spawn_time >= 1:
+      if random.random() < 0.5:
+        self.last_spawn_time = current_time
+        return True
+    return False
+
   def get_spawn_properties(self, level: int):
     # Different spawn probabilities for different levels
     # Decrease apple probability as level increases
-    apple_probability = 1.10 - (level * 0.10)
+    apple_probability = 1.20 - (level * 0.20)
     # Don't go lower than 40% chance
     apple_probability = max(0.4, apple_probability)
     # Fruit speed increase with each level
@@ -254,6 +270,157 @@ class SpawnManager:
       is_apple = False
 
     return image, is_apple, fruit_speed
+
+  def spawn_apple(self, level: int):
+    if self.should_spawn_apple():
+      fruit_speed = min(constants.MAX_FRUIT_SPEED,
+                        constants.FRUIT_START_SPEED + (level * 0.5))
+      image = self.apple_image
+      is_apple = True
+
+      return image, is_apple, fruit_speed
+
+
+class SpawnManager:
+
+  def __init__(self, lanes):
+    self.lanes = lanes
+
+    # APPLE SPAWNS
+    self.apple_next_delay = random.uniform(1, 3)
+    self.apple_last_spawn = time.time() - self.apple_next_delay
+    self.apple_max_delay = 3.0
+    self.apple_min_delay = 1.0
+    # Never go lower than this for max delay
+    self.apple_min_possible_delay = 0.3
+    # How much to decrease per level
+    self.apple_delay_decrease_rate = 0.6
+
+    # OTHER FRUIT SPAWNS
+    self.fruit_base_delay = 2.0
+    self.fruit_delay_decrease_rate = 0.2
+    self.fruit_min_delay = 0.5
+    self.fruit_last_spawn = time.time()
+    self.fruit_base_spawn_chance = 0.0
+    self.fruit_chance_increase_per_level = 0.2
+    self.fruit_max_spawn_chance = 0.8
+    self.fruit_spawned_last = False
+
+    self.fruits_speed_increase_per_level = 0.9
+
+    self.occupied_lanes = []
+    self.last_current_lane_clear = time.time()
+
+    # Images
+    self.apple_image = pygame.image.load('assets/Apple60px.png').convert_alpha()
+    self.fruit_images = [
+        pygame.image.load('assets/Banana80px.png').convert_alpha(),
+        pygame.image.load('assets/Orange60px.png').convert_alpha(),
+        pygame.image.load('assets/Grapes-60px.png').convert_alpha(),
+        pygame.image.load('assets/Lemon60px.png').convert_alpha(),
+        pygame.image.load('assets/Strawberry60px.png').convert_alpha(),
+    ]
+
+  def calculate_apple_delay(self, level: int) -> float:
+    # Decrease max delay by delay_decrease_rate for each level
+    current_max_delay = max(
+        self.apple_max_delay - (self.apple_delay_decrease_rate * (level - 1)),
+        self.apple_min_possible_delay)
+    return random.uniform(self.apple_min_delay, current_max_delay)
+
+  def get_safe_lane(self, occupied_lanes: list) -> Optional[int]:
+    # Only store the x coordinate of the lanes
+    available_lanes = [lane[0] for lane in self.lanes]
+    if occupied_lanes:
+      available_lanes = [
+          lane for lane in available_lanes if lane not in occupied_lanes
+      ]
+    if available_lanes:
+      return random.choice(available_lanes)
+
+    return None
+
+  def create_fruit(self, x, image, speed, is_apple) -> Fruit:
+    return Fruit(
+        x=x,
+        width=image.get_width(),
+        height=image.get_height(),
+        image=image,
+        speed=speed,
+        is_apple=is_apple,
+    )
+
+  def spawn_fruits(self, level: int) -> list[Fruit]:
+    current_time = time.time()
+    new_fruits: list[Fruit] = []
+    speed = min(
+        constants.MAX_FRUIT_SPEED,
+        constants.FRUIT_START_SPEED +
+        (level * self.fruits_speed_increase_per_level),
+    )
+
+    # Clear occupied lanes every half second decreasing the rate by 0.05 per level
+    clear_lane_delay = 0.5 - (0.05 * (level - 1))
+    clear_lane_delay = max(clear_lane_delay, 0.1)
+    if current_time - self.last_current_lane_clear >= clear_lane_delay:
+      self.occupied_lanes.clear()
+      self.last_current_lane_clear = current_time
+
+    # Check for apple spawn
+    if current_time - self.apple_last_spawn >= self.apple_next_delay:
+      # Create apple
+      lane = self.get_safe_lane(self.occupied_lanes)
+      if lane is not None:
+        self.occupied_lanes.append(lane)
+
+        apple = self.create_fruit(x=lane,
+                                  image=self.apple_image,
+                                  speed=speed,
+                                  is_apple=True)
+        new_fruits.append(apple)
+
+      # Reset apple spawn timer and generate new delay
+      self.apple_last_spawn = current_time
+      self.apple_next_delay = self.calculate_apple_delay(level)
+
+    # Check for other fruit spawn
+    # Calulate spawn delay, starting at 2.0s and decreasing by 0.2s per level
+    current_delay_other_fruits = self.fruit_base_delay - (
+        self.fruit_delay_decrease_rate * (level - 1))
+    current_delay_other_fruits = max(current_delay_other_fruits, 0.3)
+    if current_time - self.fruit_last_spawn >= current_delay_other_fruits:
+      # Calculate spawn chance
+      # Starting at 0% and goes up to 80% chance
+      spawn_chance = self.fruit_base_spawn_chance + (
+          self.fruit_chance_increase_per_level * (level - 1))
+      spawn_chance = min(spawn_chance, self.fruit_max_spawn_chance)
+      if random.random() < spawn_chance or (not self.fruit_spawned_last and
+                                            level > 3):
+        # Select random fruit image
+        fruit_image = random.choice(self.fruit_images)
+
+        # Get safe lane (different from apple if apple was spawned)
+        lane = self.get_safe_lane(self.occupied_lanes)
+        if lane is not None:
+          self.occupied_lanes.append(lane)
+
+          fruit = self.create_fruit(x=lane,
+                                    image=fruit_image,
+                                    speed=speed,
+                                    is_apple=False)
+          new_fruits.append(fruit)
+          self.fruit_spawned_last = True
+      else:
+        self.fruit_spawned_last = False
+
+      # Reset other fruit spawn timer
+      self.fruit_last_spawn = current_time
+
+      # Add some debugging info
+      utils.debug_info['spawn_chance'] = spawn_chance if spawn_chance else 0
+    utils.debug_info['current_delay_other_fruits'] = current_delay_other_fruits
+
+    return new_fruits
 
 
 class Audio:
